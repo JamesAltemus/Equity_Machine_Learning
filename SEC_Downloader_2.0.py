@@ -5,13 +5,12 @@ Created on Sun Jan 19 13:23:40 2020
 @author: James Altemus
 """
 import os
-import csv
 import requests
 
 import pandas as pd
 import unicodedata as utf
 
-from time import time, sleep
+from time import time
 from bs4 import BeautifulSoup
 from nltk.stem import SnowballStemmer
 from nltk.corpus import stopwords
