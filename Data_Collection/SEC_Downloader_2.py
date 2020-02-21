@@ -71,4 +71,4 @@ with open('company_info.csv', 'r') as file:
         ciks.append(line[1])
 
 os.chdir(store_in)
-download(tiks, ciks, len(tiks)/num_parallel, index_archive, form_types = 'all')
+download(tiks, ciks, len(tiks)/num_parallel, index_archive, form_types = ['10-K','10-Q','8-K','S-1','DRS'])
