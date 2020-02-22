@@ -206,10 +206,17 @@ class EDGAR_retriever:
         if download_selector.lower() == 'all' or download_selector.lower() == 'text':
             with open(file_name+text_ext, 'w+', encoding = 'utf-8') as file:
                 file.write(self.text)
+                base = os.getcwd()
+        try:
+            os.mkdir('Tables')
+        except FileExistsError:
+            pass
+        os.chdir('Tables')
         if download_selector.lower() == 'all' or download_selector.lower() == 'table':
             table_ext = '.csv'
             for i in range(len(self.tables)):
                 self.tables[i].to_csv(file_name+'_table'+str(i)+table_ext)
+        os.chdir(base)
     
     
     def _tabler(self, doc, raw_tables):
