@@ -11,7 +11,6 @@ import SEC_Downloader_Classes as sec
 
 from time import sleep
 
-
 store_in = ''
 index_archive = ''
 num_parallel = 6
@@ -42,11 +41,11 @@ def download(tiks, ciks, p, indicies, types):
         
         print('Ticker:', tik, ', CIK:', cik, ', Number Remaining:', p)
         
-        try:
-            sec.SEC_Filings(cik, alt_nm=tik, archive = indicies, types)
-            os.chdir(d)
-            with open('sucess.txt', 'a+') as failed:
-                failed.write(tik+','+cik+'\n')
+#        try:
+        sec.SEC_Filings(cik, alt_name=tik, archive = indicies, form_types = types)
+        os.chdir(d)
+        with open('sucess.txt', 'a+') as failed:
+            failed.write(tik+','+cik+'\n')
         except Exception as e:
             os.chdir(d)
             print(e)
@@ -71,4 +70,4 @@ with open('company_info.csv', 'r') as file:
         ciks.append(line[1])
 
 os.chdir(store_in)
-download(tiks, ciks, len(tiks)/num_parallel, index_archive, form_types = ['10-K','10-Q','8-K','S-1','DRS'])
+download(tiks, ciks, len(tiks)/num_parallel, index_archive, ['10-K','10-Q','8-K','S-1','DRS'])
