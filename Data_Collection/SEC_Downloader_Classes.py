@@ -4,6 +4,7 @@ Created on Sun Jan 19 13:23:40 2020
 
 @author: James Altemus
 """
+
 import os
 import requests
 
@@ -18,7 +19,7 @@ from nltk.tokenize import word_tokenize
 
 class SEC_Filings:
     def __init__(self, CIK, archive, alt_name = None, form_types = 'all',
-                 start_date = None, end_date = None, auto_download = True,
+                 start_date = None, end_date = None, auto_download = 'parsed',
                  new_folder = True, auto_parse = False):
         '''
         CIK: The company's CIK number
@@ -121,29 +122,28 @@ class SEC_Filings:
     
     
     def get_filings(self, auto_download, auto_parse):
-        print('\nProcessing Filing 0. Estimated time remaining: N/A:N/A...', end = '')
         complete = len(self.urls)
         if self.name:
             print('\n' + self.name, 'has', complete, 'applicable filings.')
         else:
             print('\n' + self.CIK, 'has', complete, 'applicable filings.')
         
-        
+        print('\nProcessing Filing 0. Estimated time remaining: N/A:N/A...', end = '')
         def end_seq(i, complete, times):
             prediction = sum(times)/len(times) * (complete - i)
             secs = int(prediction % 60)
             mins = prediction // 60
-            print('\rProcessing Filing {0}. Estimated time remaining: {1:.0f}:{2:02d}...'.format(
-                    i+1,mins,secs),end = '')
+            print('\rProcessing Filing {0}: {3} {4}. Estimated time remaining: {1:.0f}:{2:02d}...'.format(
+                    i+1,mins,secs,self.types[i+1],self.dates[i+1]),end = '')
         
         
         times = []
         self.Filings = []
         for instance in range(complete):
             start = time()
-            form = EDGAR_retriever(self.url[instance], stem = False)
+            form = EDGAR_retriever(self.urls[instance], stem = False)
             if auto_download:
-                if auto_download.lower() == 'parsed':
+                if str(auto_download).lower() == 'parsed':
                     form.text = SEC_Parser(form.text).parsed
                 f_type = self.types[instance]
                 f_date = self.dates[instance]
@@ -155,18 +155,22 @@ class SEC_Filings:
                 self.Filings.append(save_name)
                 end = time()
                 times.append(end - start)
-                end_seq(instance)
+                if instance != complete-1:
+                    end_seq(instance, complete, times)
             elif auto_parse:
                 form.text = SEC_Parser(form.text).parsed
                 self.Filings.append(form)
                 end = time()
                 times.append(end - start)
-                end_seq(instance)
+                if instance != complete-1:
+                    end_seq(instance, complete, times)
             else:
                 self.Filings.append(form)
                 end = time()
                 times.append(end - start)
-                end_seq(instance)
+                if instance != complete-1:
+                    end_seq(instance, complete, times)
+        print('All filings collected.')
 
 
 
@@ -174,7 +178,9 @@ class EDGAR_retriever:
     def __init__(self, url, stem = True, tables = True):
         if not stem:
             url = 'https://www.sec.gov/Archives/' + url
-        self.text = BeautifulSoup(requests.get(url).content, 'html.parser')
+        self.text = requests.get(url).text.replace('<div', '<p')
+        self.text = self.text.replace('</div', '</p')
+        self.text = BeautifulSoup(self.text, 'lxml')
         self.text = self.text.find_all('document')[0]
         
         if tables:
@@ -212,7 +218,7 @@ class EDGAR_retriever:
             doc = doc.replace(raw,'table'+str(i))
         return doc
     
-
+    
     def _extractor(self, tables):
         raw = []
         self.tables = []
@@ -257,21 +263,24 @@ class EDGAR_retriever:
         
         for tmp_table in tables:
             # It is easier to remove the leading accounting format now and the trailing later
-            table = remove_lead_acct(tmp_table)
-            table = pd.read_html(table)
-            if table != []:
-                table, valid = df_formatter(table)
-                if valid:
-                    # Since SEC formatting is relatively consistent, this should allow extraction of
-                    # only tables with financial data per the notes in the df_formatter function
-                    table = table.fillna('null')
-                    table.index = table[table.columns[0]]
-                    table = table.drop(table.columns[0], axis = 1)
-                    first = table.loc[table.index[0]].astype(str, errors='ignore')
-                    table.columns = first.sum() if len(first.shape) > 1 else first
-                    table = table.drop(table.index[0])
-                    self.tables.append(table)
-                    raw.append(tmp_table)
+            table = remove_lead_acct(str(tmp_table))
+            try:
+                table = pd.read_html(table)
+                if table != []:
+                    table, valid = df_formatter(table)
+                    if valid:
+                        # Since SEC formatting is relatively consistent, this should allow extraction of
+                        # only tables with financial data per the notes in the df_formatter function
+                        table = table.fillna('null')
+                        table.index = table[table.columns[0]]
+                        table = table.drop(table.columns[0], axis = 1)
+                        first = table.loc[table.index[0]].astype(str, errors='ignore')
+                        table.columns = first.sum() if len(first.shape) > 1 else first
+                        table = table.drop(table.index[0])
+                        self.tables.append(table)
+                        raw.append(tmp_table)
+            except ValueError:
+                pass
         return raw
 
 
@@ -351,7 +360,32 @@ class SEC_Parser:
                                 else:
                                     new_para.append(w)
                     
-                    new_corpus.append('.'.join(new_para))
+                    new_corpus.append('. '.join(new_para))
+            elif keep_sentences:
+                while '.' in corpus:
+                    i = corpus.index('.')
+                    new_sent = []
+                    for w in corpus[:i]:
+                        if rm_stopwords and rm_special:
+                            if (w not in stop_words) and (w.replace('.','').isalnum()):
+                                if stem:
+                                    new_sent.append(snowball.stem(w))
+                                else:
+                                    new_sent.append(w)
+                        elif rm_stopwords:
+                            if w not in stop_words:
+                                if stem:
+                                    new_sent.append(snowball.stem(w))
+                                else:
+                                    new_sent.append(w)
+                        elif rm_special:
+                            if w.replace('.','').isalnum():
+                                if stem:
+                                    new_sent.append(snowball.stem(w))
+                                else:
+                                    new_sent.append(w)
+                    new_corpus.append(' '.join(new_sent))
+                    corpus = corpus[i+1:]
             else:
                 if rm_stopwords and rm_special:
                     if (w not in stop_words) and (w.replace('.','').isalnum()):
