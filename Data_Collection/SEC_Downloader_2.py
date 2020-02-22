@@ -14,6 +14,7 @@ from time import sleep
 store_in = ''
 index_archive = ''
 num_parallel = 6
+filings = ['10-K','10-Q','8-K','S-1','DRS','10-K/A','10-Q/A','8-K/A','S-1/A','DRS/A']
 
 def download(tiks, ciks, p, indicies, types):
     if p == -1 or len(tiks) == 0:
@@ -70,4 +71,4 @@ with open('company_info.csv', 'r') as file:
         ciks.append(line[1])
 
 os.chdir(store_in)
-download(tiks, ciks, len(tiks)/num_parallel, index_archive, ['10-K','10-Q','8-K','S-1','DRS'])
+download(tiks, ciks, len(tiks)/num_parallel, index_archive, filings)
