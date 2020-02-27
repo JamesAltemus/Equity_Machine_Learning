@@ -18,12 +18,11 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 
 class SEC_Filings:
-    def __init__(self, CIK, archive, alt_name = None, form_types = 'all',
+    def __init__(self, CIK, alt_name = None, form_types = 'all',
                  start_date = None, end_date = None, auto_download = 'parsed',
-                 new_folder = True, auto_parse = False):
+                 auto_parse = False):
         '''
         CIK: The company's CIK number
-        archive: Path to the directory containing all the SEC indicies. They can be downloaded at https://www.sec.gov/Archives/edgar/full-index/
         alt_name: An alternative name. Provides easier navigation of downlaoded folders
         
         form_types: Default 'all'. A list of filing types to scrape
@@ -37,15 +36,15 @@ class SEC_Filings:
         '''
         self.CIK = self._format_cik(CIK)
         self.name = alt_name
-        self.source_dir = os.getcwd()
         
-        self._access_archive(archive, form_types, start_date, end_date, auto_download)
+        self._access_archive(form_types, start_date, end_date, auto_download)
         
-        if new_folder:
-            self._make_directory()
-            os.chdir(self.folder)
+        os.chdir('SEC_Filings')
+        self._make_filing_folder()
+        os.chdir(self.folder)
         
         self.get_filings(auto_download, auto_parse)
+        os.chdir('../')
     
     
     def _format_cik(self, CIK):
@@ -55,22 +54,22 @@ class SEC_Filings:
         return CIK
     
     
-    def _make_directory(self):
-        os.chdir(self.source_dir)
+    def _make_filing_folder(self):
+        os.chdir()
         if self.name:
             name = self.name + '_' + self.CIK
         else:
             name = self.CIK
         self.folder = name + '_SEC_Filings'
-        try:
+        if not os.path.exists(self.folder):
             os.mkdir(self.folder)
         except FileExistsError:
             pass
     
     
-    def _access_archive(self, archive, form_types, start_date=None,
+    def _access_archive(self, form_types, start_date=None,
                         end_date=None, auto_download=False):
-        os.chdir(archive)
+        os.chdir('SEC_Archive')
         indicies = os.listdir()
         self.urls = []
         self.dates = []
@@ -113,7 +112,7 @@ class SEC_Filings:
                         pass
         end = time()
         print('\rGathering information took {0:.4f} seconds.\n'.format(end-start), end ='')
-        os.chdir(self.source_dir)
+        os.chdir('../')
         if chg_cik:
             print('\nWARNING: This company likely has an older cik number. Check their Form 8-K12B and EFFECT Forms.')
             if auto_download:
@@ -206,17 +205,15 @@ class EDGAR_retriever:
         if download_selector.lower() == 'all' or download_selector.lower() == 'text':
             with open(file_name+text_ext, 'w+', encoding = 'utf-8') as file:
                 file.write(self.text)
-                base = os.getcwd()
-        try:
+        
+        if not os.path.exists('Tables'):
             os.mkdir('Tables')
-        except FileExistsError:
-            pass
         os.chdir('Tables')
         if download_selector.lower() == 'all' or download_selector.lower() == 'table':
             table_ext = '.csv'
             for i in range(len(self.tables)):
                 self.tables[i].to_csv(file_name+'_table'+str(i)+table_ext)
-        os.chdir(base)
+        os.chdir('../')
     
     
     def _tabler(self, doc, raw_tables):
