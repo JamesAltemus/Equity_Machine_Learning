@@ -52,7 +52,10 @@ def download_index(index = '^GSPC', start = datetime(1993, 1, 1), end = datetime
 
 tickers = pd.read_csv('company_info.csv')
 tickers = list(tickers['ticker'].dropna())
-os.chdir('Outperformance Directory Path')
+if not os.path.exists('Price_History'):
+    os.mkdir('Price_History')
+os.chdir('Price_History')
+
 
 idx = download_index()
 error = get_outperformance(tickers, idx)
