@@ -4,8 +4,7 @@ This project intends to figure out if a stock will outperform based on their SEC
 
 Many pieces of the project can be used separely, such as the SEC_Downloader_Classes.py.
 
-To replicate this project first download company_info.csv. Then you must download the SEC indicies
-for the desired time frame from https://www.sec.gov/Archives/edgar/full-index/.
+To replicate this project first download company_info.csv and DGS1.csv.
 
 Next modify SEC_Downloader_2.py to set the directory where you stored the indicies, where you want the filings to be saved to,
 and set the number of programs you want to run in parallel. Then edit SEC Download Multiple.bat file to set
