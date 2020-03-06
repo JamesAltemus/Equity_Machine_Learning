@@ -63,8 +63,6 @@ class SEC_Filings:
         self.folder = name + '_SEC_Filings'
         if not os.path.exists(self.folder):
             os.mkdir(self.folder)
-        except FileExistsError:
-            pass
     
     
     def _access_archive(self, form_types, start_date=None,
@@ -212,7 +210,10 @@ class EDGAR_retriever:
         if download_selector.lower() == 'all' or download_selector.lower() == 'table':
             table_ext = '.csv'
             for i in range(len(self.tables)):
-                self.tables[i].to_csv(file_name+'_table'+str(i)+table_ext)
+                if self.statement_loc[i] == 1:
+                    self.tables[i].to_csv(file_name+'_table'+str(i)+'_statement'+table_ext)
+                else:
+                    self.tables[i].to_csv(file_name+'_table'+str(i)+table_ext)
         os.chdir('../')
     
     
@@ -224,7 +225,8 @@ class EDGAR_retriever:
     
     
     def _extractor(self, tables):
-        raw = []
+        raw_tables = []
+        self.statement_loc = []
         self.tables = []
         def remove_lead_acct(text):
             text = str(text)
@@ -282,10 +284,16 @@ class EDGAR_retriever:
                         table.columns = first.sum() if len(first.shape) > 1 else first
                         table = table.drop(table.index[0])
                         self.tables.append(table)
-                        raw.append(tmp_table)
+                        raw_tables.append(tmp_table)
+                        
+                        loc = str(self.text).find(str(tmp_table))
+                        if str(self.text)[loc-1000:loc].find('CONSOLIDATED') > -1:
+                            self.statement_loc.append(1)
+                        else:
+                            self.statement_loc.append(0)
             except ValueError:
                 pass
-        return raw
+        return raw_tables
 
 
 
